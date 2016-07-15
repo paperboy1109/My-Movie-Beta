@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import CoreData
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -16,6 +17,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(application: UIApplication, didFinishLaunchingWithOptions launchOptions: [NSObject: AnyObject]?) -> Bool {
         // Override point for customization after application launch.
+
+        checkDataStore()
+        
         return true
     }
 
@@ -41,6 +45,53 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
-
+    func checkDataStore() {
+        let coreData = CoreData()
+        let request = NSFetchRequest(entityName: "Movie")
+        
+        // let movieCount = coreData.managedObjectContext.countForFetchRequest(request, error: NSErrorPointer.init())
+        let movieCount = coreData.managedObjectContext.countForFetchRequest(request, error: nil)
+        print("Total movies: \(movieCount)")
+        
+        if movieCount == 0 {
+            uploadSampleData()
+        }
+    }
+    
+    func uploadSampleData() {
+        let coreData = CoreData()
+        
+        let url = NSBundle.mainBundle().URLForResource("movies", withExtension: "json")
+        let data = NSData(contentsOfURL: url!)
+        
+        do {
+            let jsonResult = try NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers) as! NSDictionary
+            let jsonArray = jsonResult.valueForKey("movie") as! NSArray
+            
+            for json in jsonArray {
+                let movie = NSEntityDescription.insertNewObjectForEntityForName("Movie", inManagedObjectContext: coreData.managedObjectContext) as! Movie
+                
+                movie.name = json["name"] as? String
+                movie.userRating = json["rating"] as? NSNumber
+                movie.format = json["format"] as? String
+                
+                let imageName = json["image"] as? String
+                let image = UIImage(named: imageName!)
+                let imageData = UIImagePNGRepresentation(image!)
+                
+                movie.image = imageData
+            }
+            
+            coreData.saveContext()
+            
+            let request = NSFetchRequest(entityName: "Movie")
+            // let movieCount = coreData.managedObjectContext.countForFetchRequest(request, error: NSErrorPointer.init())
+            let movieCount = coreData.managedObjectContext.countForFetchRequest(request, error: nil)
+            print("Total movie: \(movieCount)")
+        }
+        catch {
+            fatalError("Cannot upload sample data")
+        }
+    }
 }
 
