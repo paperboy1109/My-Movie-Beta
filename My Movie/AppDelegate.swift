@@ -46,6 +46,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func checkDataStore() {
+        
+        print("Checking the data store ... ")
+        
         let coreData = CoreData()
         let request = NSFetchRequest(entityName: "Movie")
         

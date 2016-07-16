@@ -12,8 +12,12 @@ import CoreData
 class MovieTableViewController: UITableViewController {
     
     // MARK: - Properties
+    
+    var coreData = CoreData()
+    
     var fetchedResultsController: NSFetchedResultsController!
     var managedObjectContext: NSManagedObjectContext!
+    var movieToDelete: Movie?
     
     // MARK: - Lifecycle
     
@@ -39,8 +43,6 @@ class MovieTableViewController: UITableViewController {
     
     func loadData() {
         
-        let coreData = CoreData()
-        
         managedObjectContext = coreData.managedObjectContext
         
         let request = NSFetchRequest(entityName: "Movie")
@@ -48,6 +50,7 @@ class MovieTableViewController: UITableViewController {
         request.sortDescriptors = [sort]
         
         fetchedResultsController = NSFetchedResultsController(fetchRequest: request, managedObjectContext: managedObjectContext, sectionNameKeyPath: nil, cacheName: nil)
+        fetchedResultsController.delegate = self
         
         do {
             try fetchedResultsController.performFetch()
@@ -107,17 +110,43 @@ extension MovieTableViewController {
      }
      */
     
-    /*
-     // Override to support editing the table view.
-     override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
-     if editingStyle == .Delete {
-     // Delete the row from the data source
-     tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
-     } else if editingStyle == .Insert {
-     // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-     }
-     }
-     */
+    
+    // Override to support editing the table view.
+    override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
+        if editingStyle == .Delete {
+            
+            movieToDelete = fetchedResultsController.objectAtIndexPath(indexPath) as? Movie
+            
+            let confirmDeleteAlertController = UIAlertController(title: "Remove Movie", message: "The movie \"\(movieToDelete!.name)\" will be removed from your library.  Are you sure you want to proceed?", preferredStyle: UIAlertControllerStyle.ActionSheet)
+            
+            let deleteAction = UIAlertAction(title: "Delete", style: UIAlertActionStyle.Default) { (action) in
+                
+                self.managedObjectContext.deleteObject(self.movieToDelete!)
+                self.coreData.saveContext()
+                self.movieToDelete = nil
+            }
+            
+            let cancelAction = UIAlertAction(title: "Cancel", style: UIAlertActionStyle.Default) { (action) in
+                
+                self.movieToDelete = nil
+                
+            }
+            
+            confirmDeleteAlertController.addAction(deleteAction)
+            confirmDeleteAlertController.addAction(cancelAction)
+            
+            presentViewController(confirmDeleteAlertController, animated: true, completion: nil)
+            
+            
+            // Delete the row from the data source
+            // tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade) *** NSFetchedResultsController will be used instead
+            
+            
+        } else if editingStyle == .Insert {
+            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
+        }
+    }
+    
     
     /*
      // Override to support rearranging the table view.
@@ -133,6 +162,46 @@ extension MovieTableViewController {
      return true
      }
      */
+    
+    
+}
+
+
+extension MovieTableViewController: NSFetchedResultsControllerDelegate {
+    
+    // MARK: - Delegate methods
+    
+    func controllerWillChangeContent(controller: NSFetchedResultsController) {
+        tableView.beginUpdates()
+    }
+    
+    func controller(controller: NSFetchedResultsController, didChangeObject anObject: AnyObject, atIndexPath indexPath: NSIndexPath?, forChangeType type: NSFetchedResultsChangeType, newIndexPath: NSIndexPath?) {
+        
+        /* Detect the type of change that has triggered the event */
+        
+        switch type {
+            
+        case NSFetchedResultsChangeType.Delete:
+            
+            print("NSFetchedResultsChangeType.Delete detected")
+            
+            if let deleteIndexPath = indexPath {
+                tableView.deleteRowsAtIndexPaths([deleteIndexPath], withRowAnimation: UITableViewRowAnimation.Fade)
+            }
+            
+        case NSFetchedResultsChangeType.Insert:
+            print("NSFetchedResultsChangeType.Delete detected")
+        case NSFetchedResultsChangeType.Move:
+            print("NSFetchedResultsChangeType.Delete detected")
+        case NSFetchedResultsChangeType.Update:
+            print("NSFetchedResultsChangeType.Delete detected")
+        }
+    }
+    
+    func controllerDidChangeContent(controller: NSFetchedResultsController) {
+        tableView.endUpdates()
+    }
+    
     
     
 }
